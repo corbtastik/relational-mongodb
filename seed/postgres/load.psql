@@ -1,0 +1,75 @@
+-- seed/postgres/load.psql
+-- Client-side loader (psql) for CarrierOps CSVs.
+-- Uses \copy so files are read by the client (your Mac), not the Postgres server in the VM.
+--
+-- Run from repo root:
+--   psql "postgresql://dbadmin:postgres123@127.0.0.1:35432/carrierops" -f seed/postgres/load.psql
+--
+-- IMPORTANT: run from repo root so relative paths resolve (seed/postgres/data/*.csv)
+
+\set ON_ERROR_STOP on
+\timing on
+
+BEGIN;
+
+-- Best practice for reloading demo data:
+-- TRUNCATE is fast, clears all rows, and (with RESTART IDENTITY) resets sequences.
+TRUNCATE TABLE
+  device_events,
+  usage_records,
+  rates,
+  notes,
+  tickets,
+  subscriber_feature_state,
+  subscriber_features,
+  order_items,
+  orders,
+  devices,
+  subscriber_profiles,
+  subscribers,
+  accounts,
+  org_units,
+  ticket_status_codes,
+  features,
+  device_classes,
+  regions,
+  plans
+RESTART IDENTITY CASCADE;
+
+-- ---- Dimensions / lookup-ish tables first ----
+\copy ticket_status_codes(code, description) FROM 'seed/postgres/data/ticket_status_codes.csv' CSV HEADER;
+\copy plans(plan_id, code, name) FROM 'seed/postgres/data/plans.csv' CSV HEADER;
+\copy regions(region_id, code) FROM 'seed/postgres/data/regions.csv' CSV HEADER;
+\copy device_classes(device_class_id, code) FROM 'seed/postgres/data/device_classes.csv' CSV HEADER;
+\copy features(feature_id, code, name) FROM 'seed/postgres/data/features.csv' CSV HEADER;
+\copy org_units(org_unit_id, name, parent_org_unit_id) FROM 'seed/postgres/data/org_units.csv' CSV HEADER;
+
+-- ---- Core entities ----
+\copy accounts(account_id, account_number, name, billing_region_code, status, created_at) FROM 'seed/postgres/data/accounts.csv' CSV HEADER;
+\copy subscribers(subscriber_id, account_id, msisdn, status, created_at) FROM 'seed/postgres/data/subscribers.csv' CSV HEADER;
+\copy subscriber_profiles(subscriber_id, first_name, last_name, email, dob, pii_last4_ssn, preferences, updated_at) FROM 'seed/postgres/data/subscriber_profiles.csv' CSV HEADER;
+
+\copy devices(device_id, subscriber_id, imei, model, created_at) FROM 'seed/postgres/data/devices.csv' CSV HEADER;
+
+-- ---- Orders (1:N small) ----
+\copy orders(order_id, account_id, status, created_at) FROM 'seed/postgres/data/orders.csv' CSV HEADER;
+\copy order_items(order_item_id, order_id, sku, qty, price_cents) FROM 'seed/postgres/data/order_items.csv' CSV HEADER;
+
+-- ---- M:N + associative ----
+\copy subscriber_features(subscriber_id, feature_id) FROM 'seed/postgres/data/subscriber_features.csv' CSV HEADER;
+\copy subscriber_feature_state(subscriber_feature_state_id, subscriber_id, feature_id, effective_from, effective_to, provisioning_state, source) FROM 'seed/postgres/data/subscriber_feature_state.csv' CSV HEADER;
+
+-- ---- Tickets + notes ----
+\copy tickets(ticket_id, subscriber_id, status_code, opened_at, closed_at, summary) FROM 'seed/postgres/data/tickets.csv' CSV HEADER;
+\copy notes(note_id, ref_type, ref_id, author, body, created_at) FROM 'seed/postgres/data/notes.csv' CSV HEADER;
+
+-- ---- Ternary relationship ----
+\copy rates(plan_id, region_id, device_class_id, rate_cents) FROM 'seed/postgres/data/rates.csv' CSV HEADER;
+
+-- ---- Events / time-series ----
+\copy device_events(device_event_id, device_id, event_type, ts, payload) FROM 'seed/postgres/data/device_events.csv' CSV HEADER;
+\copy usage_records(usage_record_id, subscriber_id, ts, usage_type, units, rated_cents) FROM 'seed/postgres/data/usage_records.csv' CSV HEADER;
+
+COMMIT;
+
+\echo '✅ Postgres load complete.'

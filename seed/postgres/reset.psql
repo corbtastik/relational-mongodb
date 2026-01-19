@@ -1,0 +1,35 @@
+-- seed/postgres/reset.psql
+-- Remove all CarrierOps data (keep tables/indexes).
+--
+-- Run:
+--   psql "postgresql://dbadmin:postgres123@127.0.0.1:35432/carrierops" -f seed/postgres/reset.psql
+
+\set ON_ERROR_STOP on
+
+BEGIN;
+
+TRUNCATE TABLE
+  device_events,
+  usage_records,
+  rates,
+  notes,
+  tickets,
+  subscriber_feature_state,
+  subscriber_features,
+  order_items,
+  orders,
+  devices,
+  subscriber_profiles,
+  subscribers,
+  accounts,
+  org_units,
+  ticket_status_codes,
+  features,
+  device_classes,
+  regions,
+  plans
+RESTART IDENTITY CASCADE;
+
+COMMIT;
+
+\echo '🧹 Postgres data cleared.'
