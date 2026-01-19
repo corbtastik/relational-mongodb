@@ -1,0 +1,38 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Node/Python (if added later)
+node_modules/
+dist/
+build/
+.venv/
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# Generated / derived datasets
+seed/postgres/data/*.csv
+seed/mongo_normalized/*.ndjson
+seed/mongo_optimized/*.ndjson
+
+# Keep canonical checked in
+!seed/canonical/*.ndjson
+
+# Local env
+.env
+.env.*
+
+# Generated datasets (deterministic; do not commit)
+seed/canonical/*.ndjson
+seed/mongo_normalized/*.ndjson
+seed/mongo_optimized/*.ndjson
+seed/postgres/data/*.csv
+seed/manifest.json
